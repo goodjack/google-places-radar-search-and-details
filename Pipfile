@@ -9,6 +9,7 @@ name = "pypi"
 
 googlemaps = "*"
 python-dotenv = "*"
+pymysql = "*"
 
 
 [dev-packages]
