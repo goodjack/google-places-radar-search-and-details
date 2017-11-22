@@ -53,7 +53,7 @@ def main():
         help='The starting point of latitude measurement',
         default='-6.3425357')
     parser.add_argument(
-        '--lon1',
+        '--lng1',
         help='The starting point of longitude measurement',
         default='106.6790033')
     parser.add_argument(
@@ -61,7 +61,7 @@ def main():
         help='The end point of latitude measurement',
         default='-6.0130311')
     parser.add_argument(
-        '--lon2',
+        '--lng2',
         help='The end point of longitude measurement',
         default='107.005707')
     parser.add_argument('-r', help='radius', default='125')
@@ -69,21 +69,21 @@ def main():
     args = parser.parse_args()
 
     lat_start = float(args.lat1)
-    lon_start = float(args.lon1)
+    lng_start = float(args.lng1)
     lat_end = float(args.lat2)
-    lon_end = float(args.lon2)
+    lng_end = float(args.lng2)
     radius = float(args.r)
     place_type = args.t
 
     for lat in frange(lat_start, lat_end, 0.00025):
-        for lon in frange(lon_start, lon_end, 0.00025):
+        for lng in frange(lng_start, lng_end, 0.00025):
             connection = get_connection()
 
             # === Radar search === #
             # lat = 25.017156
-            # lon = 121.506359
-            # radar_searchs(lat, lon)
-            location = (lat, lon)
+            # lng = 121.506359
+            # radar_searchs(lat, lng)
+            location = (lat, lng)
             places_radar_result = gmaps.places_radar(
                 location, radius, type=place_type)
 
