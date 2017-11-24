@@ -4,6 +4,7 @@ import json
 import os
 import pymysql.cursors
 import random
+import sys
 
 from datetime import datetime
 from dotenv import load_dotenv, find_dotenv
@@ -47,27 +48,48 @@ def radar_search(lat, lng, radius):
     for place_type in PLACE_TYPES:
         places_radar_result = get_radar_result(location, radius, place_type)
 
-        # If the query fails
-        if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
-            # retry
-            places_radar_result = get_radar_result(location, radius,
-                                                   place_type)
+        if type(places_radar_result) is dict:
+            # If the query fails
+            if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
+                # retry
+                places_radar_result = get_radar_result(location, radius,
+                                                       place_type)
 
-        # If it still fails
-        if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
+            # If it still fails
+            if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
+                insert_radar_result_failed(location, radius, place_type,
+                                        places_radar_result)
+            else:
+                insert_radar_result(location, radius, place_type,
+                                    places_radar_result)
+        else:
+            print("Failed.")
             insert_radar_result_failed(location, radius, place_type,
                                        places_radar_result)
-        else:
-            insert_radar_result(location, radius, place_type, places_radar_result)
 
 
 def get_radar_result(location, radius, place_type):
-    check_query_times()
-    gmaps = get_gmaps()
-    print("Get Radar Result: " + str(location) + " " + str(radius) + " " +
-          str(place_type) + " " + str(datetime.now()))
-    places_radar_result = gmaps.places_radar(location, radius, type=place_type)
-    print("Got it.")
+    places_radar_result = None
+
+    for attempt in range(5):
+        check_query_times()
+        gmaps = get_gmaps()
+
+        print("Get radar result:", location, radius, place_type,
+              datetime.now())
+
+        try:
+            # raise googlemaps.exceptions.TransportError()
+            places_radar_result = gmaps.places_radar(
+                location, radius, type=place_type)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            places_radar_result = "Unexpected error:" + str(sys.exc_info()[0])
+            print("Sleep 10 seconds...")
+            sleep(10)
+        else:
+            print("Got it.")
+            break
 
     return places_radar_result
 
