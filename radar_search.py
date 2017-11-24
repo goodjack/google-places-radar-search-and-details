@@ -31,7 +31,7 @@ def check_query_times():
     query_times += 1
 
     if query_times >= 40:
-        print("Sleep a second.")
+        print("Sleep a second.\n")
         sleep(1)
         query_times = 0
 
@@ -41,20 +41,34 @@ def get_gmaps():
     return gmaps
 
 
+def radar_search(lat, lng, radius):
+    location = (lat, lng)
+    for place_type in PLACE_TYPES:
+        places_radar_result = get_radar_result(location, radius, place_type)
+
+        # If the query fails
+        if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
+            # retry
+            places_radar_result = get_radar_result(location, radius,
+                                                   place_type)
+
+        # If it still fails
+        if places_radar_result['status'] != 'OK' and places_radar_result['status'] != 'ZERO_RESULTS':
+            insert_radar_result_failed(location, radius, place_type,
+                                       places_radar_result)
+        else:
+            insert_radar_result(location, radius, place_type, places_radar_result)
+
+
 def get_radar_result(location, radius, place_type):
     check_query_times()
     gmaps = get_gmaps()
-    print("Get Radar Result: " + str(location) + " " + str(datetime.now()))
+    print("Get Radar Result: " + str(location) + " " + str(radius) + " " +
+          str(place_type) + " " + str(datetime.now()))
     places_radar_result = gmaps.places_radar(location, radius, type=place_type)
     print("Got it.")
 
     return places_radar_result
-
-
-def get_place_details(place_id):
-    check_query_times()
-    gmaps = get_gmaps()
-    return gmaps.place(place_id)
 
 
 def get_mysql_connection():
@@ -81,9 +95,26 @@ def insert_radar_result(location, radius, place_type, places_radar_result):
         with connection.cursor() as cursor:
             # Create a new record
             sql = "INSERT INTO `radar_searchs` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
-            cursor.execute(sql, (str(location), radius, place_type,
-                                 json.dumps(places_radar_result['results']),
-                                 datetime.now(), datetime.now()))
+            cursor.execute(sql,
+                           (str(location), radius, place_type,
+                            json.dumps(places_radar_result), datetime.now(),
+                            datetime.now()))
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def insert_radar_result_failed(location, radius, place_type,
+                               places_radar_result):
+    connection = get_mysql_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Create a new record
+            sql = "INSERT INTO `radar_searchs_failed` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(sql,
+                           (str(location), radius, place_type,
+                            json.dumps(places_radar_result), datetime.now(),
+                            datetime.now()))
         connection.commit()
     finally:
         connection.close()
@@ -132,37 +163,13 @@ def main():
         lng_last = float(args.lastlng)
 
         for lng in frange(lng_last, lng_end, step):
-            location = (lat_last, lng)
-            for place_type in PLACE_TYPES:
-                places_radar_result = get_radar_result(location, radius, place_type)
-
-                if places_radar_result['status'] != 'OK':
-                    places_radar_result = get_radar_result(
-                        location, radius, place_type)
-
-                insert_radar_result(location, radius, place_type, places_radar_result)
+            radar_search(lat_last, lng, radius)
 
         lat_start = lat_last + step
 
     for lat in frange(lat_start, lat_end, step):
         for lng in frange(lng_start, lng_end, step):
-            location = (lat, lng)
-            for place_type in PLACE_TYPES:
-                places_radar_result = get_radar_result(location, radius,
-                                                       place_type)
-
-                if places_radar_result['status'] != 'OK':
-                    places_radar_result = get_radar_result(
-                        location, radius, place_type)
-
-                insert_radar_result(location, radius, place_type, places_radar_result)
-
-                # print(places_radar_result['results'][0]['place_id'])
-                # for value in places_radar_result['results']:
-                #     place_id = value['place_id']
-                #     # print(get_place_details(place_id))
-                #     details = get_place_details(place_id)
-                #     #TODO: Save details to database
+            radar_search(lat, lng, radius)
 
 
 if __name__ == "__main__":
