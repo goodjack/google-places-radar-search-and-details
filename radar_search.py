@@ -29,10 +29,11 @@ def frange(start, stop, step):
 def check_query_times():
     global query_times
     query_times += 1
+    sleep(0.05)
 
     if query_times >= 40:
-        print("Sleep a second.\n")
-        sleep(1)
+        # print("Sleep a second.\n")
+        # sleep(1)
         query_times = 0
 
 
