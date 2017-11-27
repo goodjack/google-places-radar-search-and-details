@@ -172,7 +172,6 @@ def main():
         help='Last stop point of longitude measurement',
         default=None)
     parser.add_argument('-r', help='radius', default='125')
-    parser.add_argument('-t', help='type', default='restaurant')
     args = parser.parse_args()
 
     lat_start = float(args.lat1)
@@ -181,7 +180,12 @@ def main():
     lng_end = float(args.lng2)
     radius = int(args.r)
     step = radius * 0.00002
-    place_type = args.t
+
+    if lat_start > lat_end:
+        lat_start, lat_end = lat_end, lat_start
+
+    if lng_start > lng_end:
+        lng_start, lng_end = lng_end, lng_start
 
     if (args.lastlat is not None) and (args.lastlng is not None):
         lat_last = float(args.lastlat)
