@@ -16,6 +16,8 @@ load_dotenv(dotenv_path, override=True)
 
 GOOGLE_PLACES_API_KEYS = os.environ.get("GOOGLE_PLACES_API_KEYS").split(",")
 PLACE_TYPES = os.environ.get("PLACE_TYPES").split(",")
+RADAR_SEARCHS_TABLE = os.environ.get("RADAR_SEARCHS_TABLE")
+RADAR_SEARCHS_FAILED_TABLE = os.environ.get("RADAR_SEARCHS_FAILED_TABLE")
 
 query_times = 0
 
@@ -117,7 +119,7 @@ def insert_radar_result(location, radius, place_type, places_radar_result):
     try:
         with connection.cursor() as cursor:
             # Create a new record
-            sql = "INSERT INTO `radar_searchs` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
+            sql = "INSERT INTO `" + RADAR_SEARCHS_TABLE + "` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
             cursor.execute(sql,
                            (str(location), radius, place_type,
                             json.dumps(places_radar_result), datetime.now(),
@@ -133,7 +135,7 @@ def insert_radar_result_failed(location, radius, place_type,
     try:
         with connection.cursor() as cursor:
             # Create a new record
-            sql = "INSERT INTO `radar_searchs_failed` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
+            sql = "INSERT INTO `" + RADAR_SEARCHS_FAILED_TABLE + "` (`location`, `radius`, `type`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s, %s)"
             cursor.execute(sql,
                            (str(location), radius, place_type,
                             json.dumps(places_radar_result), datetime.now(),
