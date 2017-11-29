@@ -118,7 +118,7 @@ def insert_place_details_result_failed(place_id, language,
 
 
 def main():
-    with open('place_id_simple_data.txt') as input_file:
+    with open('place_id_sample_data.txt') as input_file:
         for line in input_file:
             place_id = line.strip()
             request_place_details(place_id, PLACE_DETAILS_LANG)
