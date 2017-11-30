@@ -1,4 +1,3 @@
-import argparse
 import googlemaps
 import json
 import pymysql.cursors
@@ -15,20 +14,10 @@ dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
 
 GOOGLE_PLACES_API_KEYS = os.environ.get("GOOGLE_PLACES_API_KEYS").split(",")
-RADAR_SEARCHS_TABLE = os.environ.get("RADAR_SEARCHS_TABLE")
 PLACE_DETAILS_LANG = os.environ.get("PLACE_DETAILS_LANG")
 PLACE_DETAILS_TABLE = os.environ.get("PLACE_DETAILS_TABLE")
 PLACE_DETAILS_FAILED_TABLE = os.environ.get("PLACE_DETAILS_FAILED_TABLE")
-"""
-CREATE TABLE `place_details` (
-  `place_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `language` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `results` json DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`place_id`,`language`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-"""
+PLACE_DETAILS_FILE = os.environ.get("PLACE_DETAILS_FILE")
 
 
 def get_gmaps():
@@ -100,55 +89,15 @@ def get_mysql_connection():
     return connection
 
 
-def select_all(id_start):
-    connection = get_mysql_connection()
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT `id` FROM " + RADAR_SEARCHS_TABLE + " WHERE `results` NOT LIKE '%ZERO_RESULTS%' AND `id` >= " + str(id_start)
-            cursor.execute(sql)
-            radar_searchs_ids = cursor.fetchall()
-    finally:
-        connection.close()
-
-    return radar_searchs_ids
-
-
-def select_radar_searchs_result(id):
-    print("=== Radar Search ID:", id, "===")
-
-    connection = get_mysql_connection()
-
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT `results` FROM " + RADAR_SEARCHS_TABLE + " WHERE `id`=%s"
-            cursor.execute(sql, (id, ))
-            json_results = cursor.fetchone()
-    finally:
-        connection.close()
-
-    return json_results
-
-
-def get_place_id_list(json_results):
-
-    results_row_data = json.loads(json_results['results'])['results']
-
-    place_ids = []
-    for place in results_row_data:
-        place_ids.append(place['place_id'])
-
-    return place_ids
-
-
 def insert_place_details_result(place_id, language, place_details_result):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
             # Create a new record
-            sql = "INSERT INTO `" + PLACE_DETAILS_TABLE + "` (`place_id`, `language`, `results`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `results` = %s;"
+            sql = "INSERT INTO `" + PLACE_DETAILS_TABLE + "` (`place_id`, `language`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s)"
             cursor.execute(
                 sql, (place_id, language, json.dumps(place_details_result),
-                      json.dumps(place_details_result)))
+                      datetime.now(), datetime.now()))
         connection.commit()
     finally:
         connection.close()
@@ -159,30 +108,20 @@ def insert_place_details_result_failed(place_id, language,
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "INSERT INTO `" + PLACE_DETAILS_FAILED_TABLE + "` (`place_id`, `language`, `results`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `results` = %s;"
+            # Create a new record
+            sql = "INSERT INTO `" + PLACE_DETAILS_FAILED_TABLE + "` (`place_id`, `language`, `results`, `created_at`, `updated_at`) VALUES (%s, %s, %s, %s, %s)"
             cursor.execute(
                 sql, (place_id, language, json.dumps(place_details_result),
-                      json.dumps(place_details_result)))
+                      datetime.now(), datetime.now()))
         connection.commit()
     finally:
         connection.close()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-s', help='The starting ID of radar_searchs', default='0')
-    args = parser.parse_args()
-
-    id_start = float(args.s)
-
-    radar_searchs_ids = select_all(id_start)
-
-    for radar_searchs_id in radar_searchs_ids:
-        json_results = select_radar_searchs_result(radar_searchs_id['id'])
-
-        place_ids = get_place_id_list(json_results)
-        for place_id in place_ids:
+    with open(PLACE_DETAILS_FILE) as input_file:
+        for line in input_file:
+            place_id = line.strip()
             request_place_details(place_id, PLACE_DETAILS_LANG)
 
 
