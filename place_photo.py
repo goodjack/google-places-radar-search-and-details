@@ -16,6 +16,7 @@ load_dotenv(dotenv_path, override=True)
 
 GOOGLE_PLACES_API_KEYS = os.environ.get("GOOGLE_PLACES_API_KEYS").split(",")
 PLACE_PHOTOS_TABLE = os.environ.get("PLACE_PHOTOS_TABLE")
+PLACE_PHOTOS_FILE = os.environ.get("PLACE_PHOTOS_FILE")
 
 
 def get_random_key():
@@ -89,7 +90,7 @@ def insert_place_photos_result(photo_reference, place_photos_result):
 
 
 def main():
-    with open('photo_reference_sample_data.txt') as input_file:
+    with open(PLACE_PHOTOS_FILE) as input_file:
         for line in input_file:
             photo_reference = line.strip()
             request_place_photos(photo_reference)

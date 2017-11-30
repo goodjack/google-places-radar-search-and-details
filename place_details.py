@@ -17,6 +17,7 @@ GOOGLE_PLACES_API_KEYS = os.environ.get("GOOGLE_PLACES_API_KEYS").split(",")
 PLACE_DETAILS_LANG = os.environ.get("PLACE_DETAILS_LANG")
 PLACE_DETAILS_TABLE = os.environ.get("PLACE_DETAILS_TABLE")
 PLACE_DETAILS_FAILED_TABLE = os.environ.get("PLACE_DETAILS_FAILED_TABLE")
+PLACE_DETAILS_FILE = os.environ.get("PLACE_DETAILS_FILE")
 
 
 def get_gmaps():
@@ -118,7 +119,7 @@ def insert_place_details_result_failed(place_id, language,
 
 
 def main():
-    with open('place_id_sample_data.txt') as input_file:
+    with open(PLACE_DETAILS_FILE) as input_file:
         for line in input_file:
             place_id = line.strip()
             request_place_details(place_id, PLACE_DETAILS_LANG)
