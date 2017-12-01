@@ -26,7 +26,8 @@ CREATE TABLE `place_details` (
   `results` json DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`place_id`,`language`)
+  PRIMARY KEY (`place_id`,`language`),
+  KEY `created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 """
 
@@ -71,8 +72,8 @@ def get_place_details_result(place_id, language):
             # raise googlemaps.exceptions.TransportError()
             place_details_result = gmaps.place(place_id, language=language)
         except:
-            print("Unexpected error:", sys.exc_info()[0])
-            place_details_result = "Unexpected error:" + str(sys.exc_info()[0])
+            print("Unexpected error:", sys.exc_info())
+            place_details_result = "Unexpected error:" + str(sys.exc_info())
             print("Sleep a second...")
             sleep(1)
         else:
@@ -100,12 +101,18 @@ def get_mysql_connection():
     return connection
 
 
-def select_all(id_start):
+def select_all(id_start, id_end):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT `id` FROM " + RADAR_SEARCHS_TABLE + " WHERE `results` NOT LIKE '%ZERO_RESULTS%' AND `id` >= " + str(
-                id_start)
+            sql = "SELECT `id` FROM " + RADAR_SEARCHS_TABLE + " WHERE `results` NOT LIKE '%ZERO_RESULTS%'"
+
+            if id_start > 0:
+                sql += " AND `id` >= " + str(id_start)
+
+            if id_end > 0:
+                sql += " AND `id` <= " + str(id_end)
+
             cursor.execute(sql)
             radar_searchs_ids = cursor.fetchall()
     finally:
@@ -131,7 +138,6 @@ def select_radar_searchs_result(id):
 
 
 def get_place_id_list(json_results):
-
     results_row_data = json.loads(json_results['results'])['results']
 
     place_ids = []
@@ -173,11 +179,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-s', help='The starting ID of radar_searchs', default='0')
+    parser.add_argument('-e', help='The end ID of radar_searchs', default='0')
     args = parser.parse_args()
 
     id_start = float(args.s)
+    id_end = float(args.e)
 
-    radar_searchs_ids = select_all(id_start)
+    radar_searchs_ids = select_all(id_start, id_end)
 
     for radar_searchs_id in radar_searchs_ids:
         json_results = select_radar_searchs_result(radar_searchs_id['id'])
