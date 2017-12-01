@@ -1,15 +1,13 @@
-import googlemaps
-import json
-import pymysql.cursors
+from datetime import datetime
 import random
 import os
-import requests
-import sys
-
-from datetime import datetime
-from dotenv import load_dotenv, find_dotenv
 from os.path import join, dirname
+import sys
 from time import sleep
+
+from dotenv import load_dotenv
+import pymysql.cursors
+import requests
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
@@ -31,7 +29,7 @@ def request_place_photos(photo_reference):
 def get_place_photos_result(photo_reference):
     place_photos_result = None
 
-    for attempt in range(5):
+    for attempt in range(10):
         sleep(0.05)
         key = get_random_key()
 
@@ -48,9 +46,9 @@ def get_place_photos_result(photo_reference):
                 params=payload).url
         except:
             print("Unexpected error:", sys.exc_info()[0])
-            place_photos_result = "Unexpected error:" + str(sys.exc_info()[0])
-            print("Sleep 10 seconds...")
-            sleep(10)
+            place_photos_result = "Unexpected error:" + str(sys.exc_info())
+            print("Sleep a second...")
+            sleep(1)
         else:
             print("Got it.")
             break
