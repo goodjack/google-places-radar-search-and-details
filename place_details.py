@@ -61,7 +61,7 @@ def request_place_details(place_id, language):
 def get_place_details_result(place_id, language):
     place_details_result = None
 
-    for attempt in range(5):
+    for attempt in range(10):
         sleep(0.05)
         gmaps = get_gmaps()
 
@@ -73,8 +73,8 @@ def get_place_details_result(place_id, language):
         except:
             print("Unexpected error:", sys.exc_info()[0])
             place_details_result = "Unexpected error:" + str(sys.exc_info()[0])
-            print("Sleep 10 seconds...")
-            sleep(10)
+            print("Sleep a second...")
+            sleep(1)
         else:
             print("Got it.")
             break
@@ -104,7 +104,8 @@ def select_all(id_start):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT `id` FROM " + RADAR_SEARCHS_TABLE + " WHERE `results` NOT LIKE '%ZERO_RESULTS%' AND `id` >= " + str(id_start)
+            sql = "SELECT `id` FROM " + RADAR_SEARCHS_TABLE + " WHERE `results` NOT LIKE '%ZERO_RESULTS%' AND `id` >= " + str(
+                id_start)
             cursor.execute(sql)
             radar_searchs_ids = cursor.fetchall()
     finally:
