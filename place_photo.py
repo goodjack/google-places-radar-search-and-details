@@ -100,10 +100,11 @@ def select_all(limit=None, offset=None):
             sql = "SELECT `place_id`, `language` FROM " + PLACE_DETAILS_TABLE + " WHERE `results` LIKE '%photo_reference%' ORDER BY `created_at`"
 
             if limit is not None:
-                sql += " LIMIT " + str(limit)
+                sql += " LIMIT "
                 if offset is not None:
-                    sql += ", " + str(offset)
-
+                    sql += str(offset) + ", "
+                sql += str(limit)
+            
             cursor.execute(sql)
             place_details_keys = cursor.fetchall()
     finally:
@@ -142,8 +143,9 @@ def insert_place_photo_result(photo_reference, place_photo_result):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "INSERT INTO `" + PLACE_PHOTOS_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
-            cursor.execute(sql, (photo_reference, place_photo_result))
+            sql = "INSERT INTO `" + PLACE_PHOTOS_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `results` = %s;"
+            cursor.execute(
+                sql, (photo_reference, place_photo_result, place_photo_result))
         connection.commit()
     finally:
         connection.close()
@@ -153,8 +155,9 @@ def insert_place_photo_result_failed(photo_reference, place_photo_result):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "INSERT INTO `" + PLACE_PHOTOS_FAILED_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
-            cursor.execute(sql, (photo_reference, place_photo_result))
+            sql = "INSERT INTO `" + PLACE_PHOTOS_FAILED_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `results` = %s;"
+            cursor.execute(
+                sql, (photo_reference, place_photo_result, place_photo_result))
         connection.commit()
     finally:
         connection.close()
