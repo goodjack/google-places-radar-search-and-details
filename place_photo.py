@@ -1,14 +1,15 @@
 import argparse
-from datetime import datetime
-import random
+import json
 import os
-from os.path import join, dirname
+import random
 import sys
+from datetime import datetime
+from os.path import dirname, join
 from time import sleep
 
-from dotenv import load_dotenv
 import pymysql.cursors
 import requests
+from dotenv import load_dotenv
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
@@ -21,7 +22,7 @@ PLACE_PHOTOS_FAILED_TABLE = os.environ.get("PLACE_PHOTOS_FAILED_TABLE")
 """
 CREATE TABLE `place_photos` (
   `photo_reference` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `results` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `results` varchar(2047) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`photo_reference`),
@@ -34,13 +35,17 @@ def get_random_key():
     return random.choice(GOOGLE_PLACES_API_KEYS)
 
 
-def request_place_photos(photo_reference):
-    place_photos_result = get_place_photos_result(photo_reference)
-    insert_place_photos_result(photo_reference, place_photos_result)
+def request_place_photo(photo_reference):
+    place_photo_result, success = get_place_photo_result(photo_reference)
+    if success:
+        insert_place_photo_result(photo_reference, place_photo_result)
+    else:
+        insert_place_photo_result_failed(photo_reference, place_photo_result)
 
 
-def get_place_photos_result(photo_reference):
-    place_photos_result = None
+def get_place_photo_result(photo_reference):
+    place_photo_result = None
+    success = False
 
     for attempt in range(10):
         sleep(0.05)
@@ -54,19 +59,20 @@ def get_place_photos_result(photo_reference):
                 'photoreference': photo_reference,
                 'maxwidth': '800'
             }
-            place_photos_result = requests.get(
+            place_photo_result = requests.get(
                 "https://maps.googleapis.com/maps/api/place/photo",
                 params=payload).url
         except:
             print("Unexpected error:", sys.exc_info()[0])
-            place_photos_result = "Unexpected error:" + str(sys.exc_info())
+            place_photo_result = "Unexpected error:" + str(sys.exc_info())
             print("Sleep a second...")
             sleep(1)
         else:
             print("Got it.")
+            success = True
             break
 
-    return place_photos_result
+    return (place_photo_result, success)
 
 
 def get_mysql_connection():
@@ -87,14 +93,17 @@ def get_mysql_connection():
     return connection
 
 
-def select_all(limit, offset):
+def select_all(limit=None, offset=None):
     connection = get_mysql_connection()
     try:
         with connection.cursor() as cursor:
             sql = "SELECT `place_id`, `language` FROM " + PLACE_DETAILS_TABLE + " WHERE `results` LIKE '%photo_reference%' ORDER BY `created_at`"
 
-            if (limit is not None) and (offset is not None):
-                sql += " LIMIT " + str(limit) + ", " + str(offset)
+            if limit is not None:
+                sql += " LIMIT " + str(limit)
+                if offset is not None:
+                    sql += ", " + str(offset)
+
             cursor.execute(sql)
             place_details_keys = cursor.fetchall()
     finally:
@@ -120,41 +129,35 @@ def select_place_details_result(place_id, language):
 
 
 def get_photo_reference_list(json_results):
-    # TODO: NOT FINISHED YET
-    # results_row_data = json.loads(json_results['results'])['results']
+    results_row_data = json.loads(json_results['results'])['result']['photos']
 
-    # place_ids = []
-    # for place in results_row_data:
-    #     place_ids.append(place['place_id'])
+    photo_references = []
+    for photo in results_row_data:
+        photo_references.append(photo['photo_reference'])
 
-    # return place_ids
-
-
-def insert_place_photos_result(photo_reference, place_photos_result):
-    # TODO: NOT FINISHED YET
-    # connection = get_mysql_connection()
-    # try:
-    #     with connection.cursor() as cursor:
-    #         # Create a new record
-    #         sql = "INSERT INTO `" + PLACE_PHOTOS_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
-    #         cursor.execute(sql, (photo_reference, place_photos_result))
-    #     connection.commit()
-    # finally:
-    #     connection.close()
+    return photo_references
 
 
-def insert_place_photos_result_failed(photo_reference, place_photos_result):
-    # TODO: NOT FINISHED YET
+def insert_place_photo_result(photo_reference, place_photo_result):
+    connection = get_mysql_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `" + PLACE_PHOTOS_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
+            cursor.execute(sql, (photo_reference, place_photo_result))
+        connection.commit()
+    finally:
+        connection.close()
 
-    # connection = get_mysql_connection()
-    # try:
-    #     with connection.cursor() as cursor:
-    #         # Create a new record
-    #         sql = "INSERT INTO `" + PLACE_PHOTOS_FAILED_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
-    #         cursor.execute(sql, (photo_reference, place_photos_result))
-    #     connection.commit()
-    # finally:
-    #     connection.close()
+
+def insert_place_photo_result_failed(photo_reference, place_photo_result):
+    connection = get_mysql_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `" + PLACE_PHOTOS_FAILED_TABLE + "` (`photo_reference`, `results`) VALUES (%s, %s)"
+            cursor.execute(sql, (photo_reference, place_photo_result))
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def main():
@@ -181,8 +184,7 @@ def main():
 
         photo_references = get_photo_reference_list(json_results)
         for photo_reference in photo_references:
-            # TODO: NOT FINISHED YET
-            # request_place_details(place_id, PLACE_DETAILS_LANG)
+            request_place_photo(photo_reference)
 
 
 if __name__ == "__main__":
