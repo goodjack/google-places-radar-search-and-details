@@ -1,13 +1,14 @@
-from datetime import datetime
-import random
 import os
-from os.path import join, dirname
+import random
 import sys
+from datetime import datetime
+from os.path import dirname, join
 from time import sleep
 
-from dotenv import load_dotenv
-import pymysql.cursors
 import requests
+from dotenv import load_dotenv
+
+import pymysql.cursors
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)

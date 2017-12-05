@@ -1,14 +1,15 @@
-import googlemaps
 import json
-import pymysql.cursors
-import random
 import os
+import random
 import sys
-
 from datetime import datetime
-from dotenv import load_dotenv, find_dotenv
-from os.path import join, dirname
+from os.path import dirname, join
 from time import sleep
+
+import googlemaps
+from dotenv import load_dotenv
+
+import pymysql.cursors
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
