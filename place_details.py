@@ -183,8 +183,8 @@ def main():
     parser.add_argument('-e', help='The end ID of radar_searchs', default='0')
     args = parser.parse_args()
 
-    id_start = float(args.s)
-    id_end = float(args.e)
+    id_start = int(args.s)
+    id_end = int(args.e)
 
     radar_searchs_ids = select_all(id_start, id_end)
 
